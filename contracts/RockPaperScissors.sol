@@ -18,9 +18,12 @@ contract RockPaperScissors {
         uint256 timestamp;
     }
 
+    // events
+    event Enroll(address player);
     event Move(address indexed player, Moves move);
     event MatchResult(address Winner, address Looser);
 
+    // state variables
     IERC20 public ERC20Token;
     mapping(address => uint256) playerMapping;
     mapping(address => bool) enrollmentStatus;
@@ -41,6 +44,7 @@ contract RockPaperScissors {
         ERC20Token.safeTransferFrom(msg.sender, address(this), amount);
         enrollmentStatus[msg.sender] = true;
         playerMapping[msg.sender] += amount;
+        emit Enroll(msg.sender);
     }
 
     /*
@@ -197,10 +201,14 @@ contract RockPaperScissors {
             'Wait a bit more. Liquidation time is 1 hr'
         );
         require(
-            (game.player1 == msg.sender && game.player2 == opponent) ||
-                (game.player2 == msg.sender && game.player1 == opponent),
+            ((game.player1 == msg.sender && game.player2 == opponent) &&
+                game.move2 == Moves.none) ||
+                (game.player2 == msg.sender &&
+                    game.player1 == opponent &&
+                    game.move1 == Moves.none),
             'Wrong Opponent Address'
         );
+
         uint256 liquidity = playerMapping[opponent];
         playerMapping[opponent] -= liquidity;
         playerMapping[msg.sender] += liquidity;

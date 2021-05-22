@@ -1,3 +1,15 @@
+# Installation
+
+`npm install`
+
+# Usage
+
+`npx hardhar compile`
+
+# Tests
+
+`npx hardhat test`
+
 # RockPaperScissors test project
 
 You will create a smart contract named `RockPaperScissors` whereby:  
