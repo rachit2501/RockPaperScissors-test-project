@@ -176,7 +176,7 @@ contract RockPaperScissors {
 
     function reward(address winner, address looser) internal {
         uint256 valueLost = playerMapping[looser];
-        playerMapping[winner] += valueLost;
+        playerMapping[winner] += valueLost; // since the value lost is kept in track, the player can use their winnings in future matches by just enrolling with 0 amount
         playerMapping[looser] -= valueLost;
         createMatchRequest[winner] = address(0);
         createMatchRequest[looser] = address(0);
