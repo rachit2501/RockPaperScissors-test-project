@@ -2,7 +2,6 @@
 pragma solidity ^0.8.0;
 
 import '@openzeppelin/contracts/utils/math/SafeMath.sol';
-import '@openzeppelin/contracts/token/ERC20/ERC20.sol';
 import '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import '@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol';
 
@@ -11,7 +10,6 @@ contract RockPaperScissors {
     using SafeMath for uint256;
 
     enum Moves {rock, paper, scissor, none}
-
     struct Game {
         address player1;
         address player2;
@@ -19,6 +17,9 @@ contract RockPaperScissors {
         Moves move2;
         uint256 timestamp;
     }
+
+    event Move(address indexed player, Moves move);
+    event MatchResult(address Winner, address Looser);
 
     IERC20 public ERC20Token;
     mapping(address => uint256) playerMapping;
@@ -30,12 +31,23 @@ contract RockPaperScissors {
         ERC20Token = token;
     }
 
+    /*
+     * Function to register a user to play by depositing their bets
+     * @param {uint256} amount - amount approved and then deposited to this smart contract
+     */
+
     function enroll(uint256 amount) public {
         // needs to aproove first
         ERC20Token.safeTransferFrom(msg.sender, address(this), amount);
         enrollmentStatus[msg.sender] = true;
         playerMapping[msg.sender] += amount;
     }
+
+    /*
+     * Function to submit their move. 0: Rock 1: Paper 2: Scissor 3: None (default state)
+     * @param {bytes32} gameHash - hash of the game registered
+     * @param {uint8} move - Move the user made
+     */
 
     function submitMove(bytes32 gameHash, uint8 move) public {
         Game storage game = GameMapping[gameHash];
@@ -55,6 +67,8 @@ contract RockPaperScissors {
 
         emit Move(msg.sender, Moves(move));
 
+        // assigning move to player number i.e. move1 for player1 and move2 for player2
+
         if (game.player1 == msg.sender) {
             require(game.move1 == Moves.none, 'already played your move');
             game.move1 = Moves(move);
@@ -65,7 +79,10 @@ contract RockPaperScissors {
         }
     }
 
-    event Move(address indexed player, Moves move);
+    /*
+     * Function to handle Player one adds match request for Player2
+     * @param {address} opponent : address of the opponent to match agains
+     */
 
     function matchRequest(address opponent) public {
         require(
@@ -83,6 +100,9 @@ contract RockPaperScissors {
         return createMatchRequest[msg.sender];
     }
 
+    /*
+     * The following functions: confirmMatch and rejectMatch is called if a match request was made
+     */
     function confirmMatch() public {
         address opponent = createMatchRequest[msg.sender];
         require(opponent != address(0), 'No request found');
@@ -101,6 +121,12 @@ contract RockPaperScissors {
         createMatchRequest[msg.sender] = address(0);
     }
 
+    /*
+     * Function to generate a gamehash for faster and cheaper queries using participants public address
+     * @param player1 - address of player1
+     * @param player2 - address of player2
+     */
+
     function getGameHash(address player1, address player2)
         public
         pure
@@ -108,6 +134,11 @@ contract RockPaperScissors {
     {
         return keccak256(abi.encodePacked(player1, player2));
     }
+
+    /*
+     * Internal function to get executed whenever both the moves are availaible in the game
+     * @param game - a game instance of storage type ( for persistant changes )
+     */
 
     function gameEngine(Game storage game) internal {
         Moves move1 = game.move1;
@@ -148,12 +179,16 @@ contract RockPaperScissors {
         emit MatchResult(winner, looser);
     }
 
-    event MatchResult(address Winner, address Looser);
-
     function withdraw() public {
         ERC20Token.safeTransfer(msg.sender, playerMapping[msg.sender]);
         playerMapping[msg.sender] = 0;
     }
+
+    /*
+     * Function to entice players to play. If the other side doesn't make their move within 1hr, the calling player can get all the funds
+     * @param gameHash - gameHash of the game player is up against
+     * @param opponent - opponent address to liquidate
+     */
 
     function entice(bytes32 gameHash, address opponent) public {
         Game memory game = GameMapping[gameHash];
@@ -170,6 +205,8 @@ contract RockPaperScissors {
         playerMapping[opponent] -= liquidity;
         playerMapping[msg.sender] += liquidity;
     }
+
+    // Helper functions
 
     function getPlayerEnrollmentStatus(address player)
         public
