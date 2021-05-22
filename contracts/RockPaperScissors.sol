@@ -180,10 +180,13 @@ contract RockPaperScissors {
         playerMapping[looser] -= valueLost;
         createMatchRequest[winner] = address(0);
         createMatchRequest[looser] = address(0);
+        enrollmentStatus[winner] = false;
+        enrollmentStatus[looser] = false;
         emit MatchResult(winner, looser);
     }
 
     function withdraw() public {
+        require(enrollmentStatus[msg.sender] == false, 'In match');
         ERC20Token.safeTransfer(msg.sender, playerMapping[msg.sender]);
         playerMapping[msg.sender] = 0;
     }
